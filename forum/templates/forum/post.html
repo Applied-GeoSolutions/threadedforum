@@ -1,0 +1,156 @@
+{% extends "forum/index.html" %}
+
+{% load mptt_tags %}
+
+{% block head_extra %}
+{{block.super}}
+<script type="text/javascript">
+
+function handle_reply_btn(e){
+    $("#reply_to").val(e.currentTarget.dataset.replyTo);
+       $("html, body").animate({
+        scrollTop: $('#reply-form').offset().top }, 0
+    );
+    return false;
+}
+
+function handle_delete_btn(e){
+    $("#confirm").modal();
+    $("#confirm-yes").click(function(){
+        var id = e.currentTarget.dataset.deleteId;
+        $("body").append($('<form id="delete-form" method="post" action=".">'+
+                    '<input type="hidden" name="type" value="delete">'+
+                    '<input type="hidden" name="csrfmiddlewaretoken" value="{{csrf_token}}"/>'+
+                    '<input name="delete_id" type="text" value="'+id+'"/></form>'));
+        console.log($("#delete-form"));
+        $("#delete-form").submit();
+        return false;
+    });
+    return false;
+}
+
+$(document).ready(function(){
+    $('.reply').click(handle_reply_btn);
+    $('.delete').click(handle_delete_btn);
+    $('#reply-form').submit(function(e){
+        if ($("#reply-form [name=content]").val() == ''){
+            e.preventDefault();
+            $("#post-check").alert();
+        };
+        return true;
+    });
+});
+</script>
+{% endblock %}
+{% block content %}
+{{block.super }}
+<!-- Modal -->
+<div id="confirm" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                 <h3 id="myModalLabel">Confirm</h3>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-dismiss="modal" aria-hidden="true">No</button>
+                <button id="confirm-yes" class="btn btn-primary">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class='panel panel-default'>
+        <div class="panel-heading">
+            <h4 class='panel-title'>{{post.heading}}</h4>
+            <small>Posted {{post.created}} by {{post.user.username}}
+            {% if request.user.is_authenticated %}
+            <div class='btn-group pull-right'>
+                {% if request.user.is_staff %}
+                    <a href='#' data-delete-id="{{post.pk}}" class='delete btn btn-default btn-xs'>Delete  <i class='glyphicon glyphicon-trash'></i></a>
+                {% endif %}
+                {% if request.user.is_staff or request.user == post.user %}
+                    <a href='{% url 'post_edit' post.pk %}' data-edit-id="{{post.pk}}" class='edit btn btn-default btn-xs'>Edit <i class='glyphicon glyphicon-pencil'></i></a>
+                {% endif %}
+                <a href='#' data-reply-to="{{post.pk}}" class='reply btn btn-default btn-xs'>Reply <i class='glyphicon glyphicon-arrow-down'></i></a>
+            </div>
+            {% endif %}
+            </small>
+        </div>
+        <div class="panel-body">
+            {% if post.is_html %}
+                {{post.content|safe}}
+            {% else %}
+                {{post.content|linebreaks}}
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row">
+    {% if replies %}
+        {% for r in replies %}
+            <div id="c{{r.pk}}" style="margin-left: {{r.mptt_level}}0px;" class="panel panel-default">
+                <div class="panel-heading">
+                    <small><a name="c{{ r.pk }}"></a>
+                    Comment #{{r.number}} posted {{r.created|timesince}} ago by <i>{{r.user.username}}</i>
+                    {% if r.parent != post %} - reply to <a href='#c{{r.parent.pk}}'>#{{r.parent_number}}</a>{% endif %}
+                    {% if request.user.is_authenticated %}
+                    <div class='btn-group pull-right'>
+                        {% if request.user.is_staff or request.user == r.user %}
+                            {% if r.is_leaf_node %}
+                            <a href='#' data-delete-id="{{r.pk}}" class='delete btn btn-default btn-xs'>Delete <i class='glyphicon glyphicon-trash'></i></a>
+                            {% endif %}
+                            <a href='{% url 'post_edit' r.pk %}' data-edit-id="{{r.pk}}" class='edit btn btn-default btn-xs'>Edit <i class='glyphicon glyphicon-pencil'></i></a>
+                        {% endif %}
+                        <a href='#' data-reply-to="{{r.pk}}" class='reply btn btn-default btn-xs'>Reply <i class='glyphicon glyphicon-arrow-down'></i></a>
+                    </div>
+                    {% endif %}</small>
+                </div>
+                <div class="panel-body">
+                    {% if post.is_html %}
+                        {{r.content|safe}}
+                    {% else %}
+                        {{r.content|linebreaks}}
+                    {% endif %}
+                </div>
+                <!--{% if r.modified != r.created %}<div class='pull-right'><small>Edited {{r.modified|timesince}} ago</small></div>{% endif %}-->
+            </div>
+        {% endfor %}
+    {% else %}
+        No replies.
+    {% endif %}
+</div>
+<div class="col-md-offset-2 col-md-7">
+{% if request.user.is_authenticated %}
+<form id="reply-form" class="form-horizontal" method="post" action="." role="form">
+    {% csrf_token %}
+    <fieldset>
+        <div class="form-group">
+            <label class="control-label col-md-offset-2 col-md-4">Reply to</label>
+             <div class="col-md-4">
+                <select class='form-control' id="reply_to" name="reply_to">
+                    <option selected="selected" value="{{post.pk}}">Post</option>
+                    {% for r in replies %}<option value="{{r.pk}}">#{{r.number}}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <textarea name='content' class="form-control" rows="5" placeholder="Type your comment here…"></textarea>
+    </fieldset>
+    <div class="form-group">
+        <div id="post-check" class="fade hide">
+            <p>Please make sure the comment is not empty.</p>
+        </div>
+    </div>
+    <input type="hidden" name="type" value="reply">
+    <button type="submit" class="btn btn-primary pull-right">Submit</button>
+</form>
+{% else %}
+Please <a href='{% url "register" %}'>register</a> or <a href='{% url "login" %}'>log-in</a> to post.
+{% endif %}
+</div>
+{% endblock %}

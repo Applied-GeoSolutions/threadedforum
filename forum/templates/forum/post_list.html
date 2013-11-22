@@ -1,0 +1,33 @@
+{% extends "forum/index.html" %}
+{% block content %}
+{{block.super }}
+	<p>
+	{% if posts %}
+		<table class="table">
+			<thead><tr><th>Heading</th><th>Replies</th><th>Views</th></tr></thead>
+			<tbody>
+			{% for p in posts %}
+				<tr>
+					<td><a href='{% url "post" p.pk %}#{{p.heading|slugify}}'>{{p.heading}}</a></td>
+					<td>{{p.get_descendant_count}}</td>
+					<td>{{p.hits}}</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	{% else %}
+		No posts.
+	{% endif %}
+	</p>
+	<p>
+		{% if user.is_authenticated %}
+			{% if category %}
+			<a href='{% url "post_new_cat" category.pk %}' class='btn btn-primary'>Make New Post</a>
+			{% else %}
+			<a href='{% url "post_new" %}' class='btn btn-primary'>Make New Post</a>
+			{% endif %}
+		{% else %}
+			Please <a href='{% url "register" %}'>register</a> or <a href='{% url "login" %}'>log-in</a> to post.
+		{% endif %}
+	</p>
+{% endblock %}

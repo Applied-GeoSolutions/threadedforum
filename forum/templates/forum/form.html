@@ -1,0 +1,18 @@
+{% extends "forum/index.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+{% if form.non_field_errors %}
+     <div class="alert alert-error">
+         <a class="close" data-dismiss="alert">&times;</a></a>
+         {% for non_field_error in form.non_field_errors %}
+              {{ non_field_error }}
+         {% endfor %}
+     </div>
+ {% endif %}
+
+<form action="." method="post" class="form-horizontal" role="form">
+    {% crispy form %}
+</form>
+
+{% endblock %}

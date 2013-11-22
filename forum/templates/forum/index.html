@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block navigation_sidebar %}
+    <li class="nav-header">Forum</li>
+    <li{% menu_active "/forum/$" %}>
+            <a href='/forum/'> Recent Discussions</a>
+    </li>
+    <!--<li{% menu_active "/forum/all/" %}>
+            <a href='/forum/all/'> All Discussions</a>
+    </li>-->
+    <li class="nav-header">Categories</li>
+    {% for c in categories %}
+        <li {% if c in post.categories.all or c == category %}class='active'{% endif %}> <a href='{% url "category" c.pk %}'> {{c.name}}</a> </li>
+    {% endfor %}
+
+    {% if user.is_staff %}
+    <li class="nav-header">Staff Actions</li>
+        <li><a href='/admin/forum/'> Administer</a></li>
+    {% endif %}
+{% endblock %}
+{% block content %}
+<h3>AFOLU Carbon Discussion Forum</h3>
+{{content}}
+{% endblock %}
